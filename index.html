@@ -2,72 +2,126 @@
 <html>
 <head>
   <title>EventOps Check-In</title>
+
   <style>
-    body { font-family: Arial; padding:20px; }
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f5f6f8;
+    }
 
-.result-item {
-  padding:12px;
-  border:1px solid #ddd;
-  margin-top:5px;
-  cursor:pointer;
-  border-radius:6px;
-}
+    h2 {
+      margin-bottom: 10px;
+    }
 
-#modal {
-  display:none;
-  position:fixed;
-  top:8%;
-  left:50%;
-  transform:translateX(-50%);
-  background:white;
-  padding:25px;
-  width:420px;
-  border-radius:14px;
-  box-shadow:0 10px 30px rgba(0,0,0,0.2);
-}
+    input {
+      padding: 10px;
+      width: 300px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
 
-.row {
-  display:flex;
-  justify-content:space-between;
-  margin:6px 0;
-}
+    .result-item {
+      padding: 12px;
+      border: 1px solid #ddd;
+      margin-top: 6px;
+      border-radius: 8px;
+      cursor: pointer;
+      background: white;
+    }
 
-#days {
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin-top:15px;
-}
+    /* MODAL */
+    #modal {
+      display: none;
+      position: fixed;
+      top: 8%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #f9f9f9;
+      padding: 25px;
+      width: 420px;
+      border-radius: 16px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+    }
 
-.day-btn {
-  flex:1;
-  padding:15px;
-  border-radius:10px;
-  border:none;
-  font-weight:bold;
-}
+    .close {
+      display: flex;
+      justify-content: flex-end;
+    }
 
-.green {
-  background:#b7d3c1;
-}
+    .close span {
+      cursor: pointer;
+      font-size: 22px;
+      font-weight: bold;
+    }
 
-.red {
-  background:#e7bcbc;
-}
+    .row {
+      display: flex;
+      gap: 10px;
+      margin: 8px 0;
+    }
 
-.selected {
-  border:2px solid black;
-}
+    .row b {
+      width: 120px;
+    }
 
-#actionBtn {
-  width:100%;
-  padding:15px;
-  margin-top:20px;
-  border:none;
-  border-radius:10px;
-  font-size:16px;
-  cursor:pointer;
-}
+    #days {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .day-btn {
+      flex: 1;
+      padding: 14px;
+      border-radius: 12px;
+      border: none;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    .day-btn:hover {
+      transform: scale(1.03);
+    }
+
+    .green {
+      background: #c8f2d1;
+    }
+
+    .red {
+      background: #f7c6c6;
+    }
+
+    .selected {
+      border: 2px solid black;
+    }
+
+    #actionBtn {
+      width: 100%;
+      padding: 15px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* DASHBOARD */
+    .stats {
+      display: flex;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .card {
+      flex: 1;
+      padding: 12px;
+      background: white;
+      border-radius: 10px;
+      text-align: center;
+    }
+
   </style>
 </head>
 
@@ -84,22 +138,22 @@ Day:
   <option value="4">Day 5</option>
 </select>
 
-<div style="display:flex; gap:10px; margin:20px 0;">
-  <div>Total: <span id="total">0</span></div>
-  <div>Present: <span id="present">0</span></div>
-  <div>No Show: <span id="noshow">0</span></div>
-  <div>%: <span id="percent">0</span></div>
+<div class="stats">
+  <div class="card">Total <br><b id="total">0</b></div>
+  <div class="card">Present <br><b id="present">0</b></div>
+  <div class="card">No Show <br><b id="noshow">0</b></div>
+  <div class="card">% <br><b id="percent">0</b></div>
 </div>
 
-<input type="text" id="search" placeholder="Search..." oninput="handleSearch()" style="width:300px;padding:10px;">
+<input id="search" placeholder="Search..." oninput="handleSearch()">
 
 <div id="results"></div>
 
 <!-- MODAL -->
 <div id="modal">
-  <div style="display:flex; justify-content:space-between;">
-    <h3>Details</h3>
-    <span onclick="closeModal()" style="cursor:pointer;font-size:20px;">✖</span>
+
+  <div class="close">
+    <span onclick="closeModal()">✖</span>
   </div>
 
   <div class="row"><b>Unique ID:</b><span id="m_id"></span></div>
@@ -111,17 +165,17 @@ Day:
   <div id="days"></div>
 
   <button id="actionBtn"></button>
+
 </div>
 
 <script>
+
 const API_URL = "https://script.google.com/macros/s/AKfycbyn6wx4nZL9J0kkqvN7SHo4xnHUyVsbdZPTvoooiGjxuVOiSpNgS0K22dsR2yFT-afHhQ/exec";
 
 let attendees = [];
 let selected = null;
 
-/*************************************************
- LOAD DATA
-*************************************************/
+/******** LOAD *********/
 function init() {
   fetch(`${API_URL}?action=getAllAttendees`)
     .then(r => r.json())
@@ -130,12 +184,9 @@ function init() {
       loadDashboard();
     });
 }
-
 init();
 
-/*************************************************
- SEARCH
-*************************************************/
+/******** SEARCH *********/
 function handleSearch() {
   const q = document.getElementById("search").value.toLowerCase();
 
@@ -162,9 +213,7 @@ function renderResults(list) {
   });
 }
 
-/*************************************************
- MODAL
-*************************************************/
+/******** MODAL *********/
 function openModal(a) {
   selected = a;
 
@@ -185,9 +234,7 @@ function closeModal() {
   document.getElementById("modal").style.display = "none";
 }
 
-/*************************************************
- DAYS
-*************************************************/
+/******** DAYS *********/
 function renderDays(a) {
   const container = document.getElementById("days");
   container.innerHTML = "";
@@ -216,9 +263,7 @@ function renderDays(a) {
   renderAction(a);
 }
 
-/*************************************************
- ACTION BUTTON
-*************************************************/
+/******** ACTION *********/
 function renderAction(a) {
   const btn = document.getElementById("actionBtn");
   const day = getDay();
@@ -236,9 +281,7 @@ function renderAction(a) {
   }
 }
 
-/*************************************************
- API CALLS
-*************************************************/
+/******** API *********/
 function checkIn(id, day) {
   fetch(`${API_URL}?action=checkIn&id=${id}&day=${day}`)
     .then(() => reload());
@@ -255,18 +298,15 @@ function reload() {
     .then(data => {
       attendees = data;
 
-      // find updated record
       const updated = attendees.find(x => x.id === selected.id);
       selected = updated;
 
       loadDashboard();
-      openModal(updated); // 🔥 THIS FIXES YOUR ISSUE
+      openModal(updated);
     });
 }
 
-/*************************************************
- DASHBOARD
-*************************************************/
+/******** DASHBOARD *********/
 function loadDashboard() {
   const day = getDay();
 
@@ -280,12 +320,10 @@ function loadDashboard() {
     });
 }
 
-/*************************************************
- HELPERS
-*************************************************/
 function getDay() {
   return parseInt(document.getElementById("daySelect").value);
 }
+
 </script>
 
 </body>
