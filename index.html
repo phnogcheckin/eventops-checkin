@@ -4,45 +4,70 @@
   <title>EventOps Check-In</title>
   <style>
     body { font-family: Arial; padding:20px; }
-    .result-item {
-      padding:10px;
-      border:1px solid #ddd;
-      margin-top:5px;
-      cursor:pointer;
-    }
 
-    #modal {
-      display:none;
-      position:fixed;
-      top:10%;
-      left:50%;
-      transform:translateX(-50%);
-      background:white;
-      padding:20px;
-      width:400px;
-      border-radius:10px;
-      box-shadow:0 0 10px rgba(0,0,0,0.3);
-    }
+.result-item {
+  padding:12px;
+  border:1px solid #ddd;
+  margin-top:5px;
+  cursor:pointer;
+  border-radius:6px;
+}
 
-    .day-btn {
-      padding:15px;
-      margin:5px;
-      border-radius:8px;
-      border:none;
-      width:80px;
-    }
+#modal {
+  display:none;
+  position:fixed;
+  top:8%;
+  left:50%;
+  transform:translateX(-50%);
+  background:white;
+  padding:25px;
+  width:420px;
+  border-radius:14px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.2);
+}
 
-    .green { background:#b7d3c1; }
-    .red { background:#e7bcbc; }
+.row {
+  display:flex;
+  justify-content:space-between;
+  margin:6px 0;
+}
 
-    #actionBtn {
-      width:100%;
-      padding:15px;
-      margin-top:15px;
-      border:none;
-      border-radius:8px;
-      font-size:16px;
-    }
+#days {
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-top:15px;
+}
+
+.day-btn {
+  flex:1;
+  padding:15px;
+  border-radius:10px;
+  border:none;
+  font-weight:bold;
+}
+
+.green {
+  background:#b7d3c1;
+}
+
+.red {
+  background:#e7bcbc;
+}
+
+.selected {
+  border:2px solid black;
+}
+
+#actionBtn {
+  width:100%;
+  padding:15px;
+  margin-top:20px;
+  border:none;
+  border-radius:10px;
+  font-size:16px;
+  cursor:pointer;
+}
   </style>
 </head>
 
@@ -72,16 +97,20 @@ Day:
 
 <!-- MODAL -->
 <div id="modal">
-  <div><b>ID:</b> <span id="m_id"></span></div>
-  <div><b>Name:</b> <span id="m_name"></span></div>
-  <div><b>Company:</b> <span id="m_company"></span></div>
-  <div><b>ASN:</b> <span id="m_asn"></span></div>
-  <div><b>Shirt:</b> <span id="m_shirt"></span></div>
+  <div style="display:flex; justify-content:space-between;">
+    <h3>Details</h3>
+    <span onclick="closeModal()" style="cursor:pointer;font-size:20px;">✖</span>
+  </div>
 
-  <div id="days" style="margin-top:10px;"></div>
+  <div class="row"><b>Unique ID:</b><span id="m_id"></span></div>
+  <div class="row"><b>Name:</b><span id="m_name"></span></div>
+  <div class="row"><b>Company:</b><span id="m_company"></span></div>
+  <div class="row"><b>ASN:</b><span id="m_asn"></span></div>
+  <div class="row"><b>Shirt:</b><span id="m_shirt"></span></div>
+
+  <div id="days"></div>
 
   <button id="actionBtn"></button>
-  <button onclick="closeModal()" style="margin-top:10px;">Close</button>
 </div>
 
 <script>
@@ -178,7 +207,7 @@ function renderDays(a) {
     }
 
     if (i === selectedDay) {
-      btn.style.border = "2px solid black";
+      btn.classList.add("selected");
     }
 
     container.appendChild(btn);
@@ -197,10 +226,12 @@ function renderAction(a) {
   if (a.days[day] === "Present") {
     btn.innerText = "Undo (Admin)";
     btn.style.background = "#dc3545";
+    btn.style.color = "white";
     btn.onclick = () => undo(a.id, day);
   } else {
     btn.innerText = "Check In";
     btn.style.background = "#ccc";
+    btn.style.color = "black";
     btn.onclick = () => checkIn(a.id, day);
   }
 }
@@ -223,8 +254,13 @@ function reload() {
     .then(r => r.json())
     .then(data => {
       attendees = data;
+
+      // find updated record
+      const updated = attendees.find(x => x.id === selected.id);
+      selected = updated;
+
       loadDashboard();
-      closeModal();
+      openModal(updated); // 🔥 THIS FIXES YOUR ISSUE
     });
 }
 
