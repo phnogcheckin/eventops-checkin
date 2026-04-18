@@ -31,24 +31,25 @@
     }
 
     /* MODAL */
-    #modal {
-      display: none;
-      position: fixed;
-      top: 8%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #f9f9f9;
-      padding: 25px;
-      width: 420px;
-      border-radius: 16px;
-      box-shadow: 0 15px 40px rgba(0,0,0,0.2);
-    }
+#modal {
+  display: none;
+  position: fixed;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f9f9f9;
+  padding: 20px 25px 25px 25px; /* 👈 balanced */
+  width: 420px;
+  border-radius: 16px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+}
 
-    .close {
-      display: flex;
-      justify-content: flex-end;
-    }
-
+.close {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px; /* 👈 reduces gap */
+}
+    
     .close span {
       cursor: pointer;
       font-size: 22px;
@@ -288,8 +289,20 @@ function checkIn(id, day) {
 }
 
 function undo(id, day) {
-  fetch(`${API_URL}?action=undo&id=${id}&day=${day}`)
-    .then(() => reload());
+  const pin = prompt("Enter Admin PIN:");
+
+  if (!pin) return;
+
+  fetch(`${API_URL}?action=verifyPin&pin=${pin}`)
+    .then(r => r.json())
+    .then(res => {
+      if (res.valid) {
+        fetch(`${API_URL}?action=undo&id=${id}&day=${day}`)
+          .then(() => reload());
+      } else {
+        alert("Invalid PIN");
+      }
+    });
 }
 
 function reload() {
