@@ -1,166 +1,254 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
   <title>EventOps Check-In</title>
   <style>
     body { font-family: Arial; padding:20px; }
-    select, input { padding:6px; font-size:14px; }
-
-    .top-bar { display:flex; align-items:center; margin-bottom:20px; }
-    .day-group { display:flex; align-items:center; gap:10px; }
-
-    .small-btn {
-      padding:6px 12px;
-      font-size:13px;
-      border:none;
-      border-radius:4px;
-      cursor:pointer;
-      color:white;
-      background:#6c757d;
-      height:32px;
-    }
-    .danger { background:#dc3545; }
-
-    .dashboard { display:flex; gap:15px; margin-bottom:20px; }
-
-    .card {
-      flex:1;
-      padding:15px;
-      background:#f1f1f1;
-      text-align:center;
-      border-radius:6px;
-    }
-
-    #searchBox { width:300px; margin-bottom:10px; }
-
     .result-item {
       padding:10px;
       border:1px solid #ddd;
-      margin-bottom:5px;
+      margin-top:5px;
       cursor:pointer;
-      border-radius:4px;
     }
 
-    .modal {
+    #modal {
       display:none;
       position:fixed;
-      top:0;
-      left:0;
-      width:100%;
-      height:100%;
-      background:rgba(0,0,0,0.4);
-      justify-content:center;
-      align-items:center;
-    }
-
-    .modal-content {
+      top:10%;
+      left:50%;
+      transform:translateX(-50%);
       background:white;
       padding:20px;
-      width:500px;
+      width:400px;
+      border-radius:10px;
+      box-shadow:0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .day-btn {
+      padding:15px;
+      margin:5px;
       border-radius:8px;
+      border:none;
+      width:80px;
     }
 
-    .day-box {
-      padding:10px;
-      margin:4px;
-      border-radius:6px;
-      text-align:center;
-    }
+    .green { background:#b7d3c1; }
+    .red { background:#e7bcbc; }
 
-    .present { background:#d4edda; }
-    .no-show { background:#f8d7da; }
+    #actionBtn {
+      width:100%;
+      padding:15px;
+      margin-top:15px;
+      border:none;
+      border-radius:8px;
+      font-size:16px;
+    }
   </style>
 </head>
 
-<body onload="initialize()">
+<body>
 
 <h2>EventOps Check-In</h2>
 
-<div class="top-bar">
-  <div class="day-group">
-    <strong>Day:</strong>
-    <select id="daySelect" onchange="changeDay()">
-      <option value="0">Day 1</option>
-      <option value="1">Day 2</option>
-      <option value="2">Day 3</option>
-      <option value="3">Day 4</option>
-      <option value="4">Day 5</option>
-    </select>
-  </div>
+Day:
+<select id="daySelect" onchange="loadDashboard()">
+  <option value="0">Day 1</option>
+  <option value="1">Day 2</option>
+  <option value="2">Day 3</option>
+  <option value="3">Day 4</option>
+  <option value="4">Day 5</option>
+</select>
+
+<div style="display:flex; gap:10px; margin:20px 0;">
+  <div>Total: <span id="total">0</span></div>
+  <div>Present: <span id="present">0</span></div>
+  <div>No Show: <span id="noshow">0</span></div>
+  <div>%: <span id="percent">0</span></div>
 </div>
 
-<div class="dashboard">
-  <div class="card">Total<strong id="total">0</strong></div>
-  <div class="card">Present<strong id="present">0</strong></div>
-  <div class="card">No Show<strong id="noShow">0</strong></div>
-  <div class="card">%<strong id="percentage">0%</strong></div>
-</div>
+<input type="text" id="search" placeholder="Search..." oninput="handleSearch()" style="width:300px;padding:10px;">
 
-<input id="searchBox" placeholder="Search..." oninput="search()" />
 <div id="results"></div>
+
+<!-- MODAL -->
+<div id="modal">
+  <div><b>ID:</b> <span id="m_id"></span></div>
+  <div><b>Name:</b> <span id="m_name"></span></div>
+  <div><b>Company:</b> <span id="m_company"></span></div>
+  <div><b>ASN:</b> <span id="m_asn"></span></div>
+  <div><b>Shirt:</b> <span id="m_shirt"></span></div>
+
+  <div id="days" style="margin-top:10px;"></div>
+
+  <button id="actionBtn"></button>
+  <button onclick="closeModal()" style="margin-top:10px;">Close</button>
+</div>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbyn6wx4nZL9J0kkqvN7SHo4xnHUyVsbdZPTvoooiGjxuVOiSpNgS0K22dsR2yFT-afHhQ/exec";
 
-let currentDay = 0;
 let attendees = [];
+let selected = null;
 
-function initialize(){
-  loadAttendees();
-  refreshDashboard();
-}
-
-function loadAttendees(){
-  fetch(API_URL + "?action=getAllAttendees")
-    .then(res => res.json())
+/*************************************************
+ LOAD DATA
+*************************************************/
+function init() {
+  fetch(`${API_URL}?action=getAllAttendees`)
+    .then(r => r.json())
     .then(data => {
       attendees = data;
+      loadDashboard();
     });
 }
 
-function refreshDashboard(){
-  fetch(API_URL + "?action=getCounts&day=" + currentDay)
-    .then(res => res.json())
-    .then(data => {
-      document.getElementById("total").innerText = data.total;
-      document.getElementById("present").innerText = data.present;
-      document.getElementById("noShow").innerText = data.noShow;
-      document.getElementById("percentage").innerText = data.percentage + "%";
-    });
+init();
+
+/*************************************************
+ SEARCH
+*************************************************/
+function handleSearch() {
+  const q = document.getElementById("search").value.toLowerCase();
+
+  const results = attendees.filter(a =>
+    (a.first && a.first.toLowerCase().includes(q)) ||
+    (a.last && a.last.toLowerCase().includes(q)) ||
+    (a.nick && a.nick.toLowerCase().includes(q)) ||
+    (a.email && a.email.toLowerCase().includes(q))
+  );
+
+  renderResults(results);
 }
 
-function search(){
-  const q = document.getElementById("searchBox").value.toLowerCase();
+function renderResults(list) {
   const container = document.getElementById("results");
   container.innerHTML = "";
 
-  attendees.filter(a =>
-    a.id.toLowerCase().includes(q) ||
-    a.name.toLowerCase().includes(q)
-  ).forEach(a => {
+  list.forEach(a => {
     const div = document.createElement("div");
     div.className = "result-item";
-    div.innerText = a.id + " - " + a.name;
-    div.onclick = () => checkIn(a.id);
+    div.innerText = `${a.id} - ${a.first} ${a.last}`;
+    div.onclick = () => openModal(a);
     container.appendChild(div);
   });
 }
 
-function checkIn(id){
-  fetch(API_URL + "?action=checkIn&id=" + id + "&day=" + currentDay)
-    .then(res => res.text())
-    .then(msg => {
-      alert(msg);
-      refreshDashboard();
-      loadAttendees();
-    })
-    .catch(err => alert("Error: " + err.message));
+/*************************************************
+ MODAL
+*************************************************/
+function openModal(a) {
+  selected = a;
+
+  document.getElementById("modal").style.display = "block";
+
+  document.getElementById("m_id").innerText = a.id;
+  document.getElementById("m_name").innerText =
+    `${a.first} ${a.last} (${a.nick})`;
+
+  document.getElementById("m_company").innerText = a.company || "";
+  document.getElementById("m_asn").innerText = a.asn || "";
+  document.getElementById("m_shirt").innerText = a.shirt || "";
+
+  renderDays(a);
 }
 
-function changeDay(){
-  currentDay = parseInt(document.getElementById("daySelect").value);
-  refreshDashboard();
+function closeModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+/*************************************************
+ DAYS
+*************************************************/
+function renderDays(a) {
+  const container = document.getElementById("days");
+  container.innerHTML = "";
+
+  const selectedDay = getDay();
+
+  for (let i = 0; i < 5; i++) {
+    const btn = document.createElement("button");
+    btn.className = "day-btn";
+
+    if (a.days[i] === "Present") {
+      btn.classList.add("green");
+      btn.innerText = `Day ${i+1} ✓`;
+    } else {
+      btn.classList.add("red");
+      btn.innerText = `Day ${i+1} ✖`;
+    }
+
+    if (i === selectedDay) {
+      btn.style.border = "2px solid black";
+    }
+
+    container.appendChild(btn);
+  }
+
+  renderAction(a);
+}
+
+/*************************************************
+ ACTION BUTTON
+*************************************************/
+function renderAction(a) {
+  const btn = document.getElementById("actionBtn");
+  const day = getDay();
+
+  if (a.days[day] === "Present") {
+    btn.innerText = "Undo (Admin)";
+    btn.style.background = "#dc3545";
+    btn.onclick = () => undo(a.id, day);
+  } else {
+    btn.innerText = "Check In";
+    btn.style.background = "#ccc";
+    btn.onclick = () => checkIn(a.id, day);
+  }
+}
+
+/*************************************************
+ API CALLS
+*************************************************/
+function checkIn(id, day) {
+  fetch(`${API_URL}?action=checkIn&id=${id}&day=${day}`)
+    .then(() => reload());
+}
+
+function undo(id, day) {
+  fetch(`${API_URL}?action=undo&id=${id}&day=${day}`)
+    .then(() => reload());
+}
+
+function reload() {
+  fetch(`${API_URL}?action=getAllAttendees`)
+    .then(r => r.json())
+    .then(data => {
+      attendees = data;
+      loadDashboard();
+      closeModal();
+    });
+}
+
+/*************************************************
+ DASHBOARD
+*************************************************/
+function loadDashboard() {
+  const day = getDay();
+
+  fetch(`${API_URL}?action=getCounts&day=${day}`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById("total").innerText = d.total;
+      document.getElementById("present").innerText = d.present;
+      document.getElementById("noshow").innerText = d.noShow;
+      document.getElementById("percent").innerText = d.percentage;
+    });
+}
+
+/*************************************************
+ HELPERS
+*************************************************/
+function getDay() {
+  return parseInt(document.getElementById("daySelect").value);
 }
 </script>
 
