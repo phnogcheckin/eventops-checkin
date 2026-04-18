@@ -1,258 +1,227 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <title>EventOps Check-In</title>
 
 <style>
-body { font-family: Arial; background:#f5f6f8; padding:20px; }
+body { font-family: Arial; background:#f5f6f8; padding:30px; }
 
-input {
-  padding:10px;
-  width:300px;
-  border-radius:8px;
-  border:1px solid #ccc;
+.stats { display:flex; gap:10px; margin:15px 0; }
+.card { background:#eee; padding:15px; border-radius:10px; flex:1; text-align:center; }
+
+input, select {
+  padding:10px; border-radius:8px; border:1px solid #ccc;
+  margin:10px 0; width:300px;
 }
 
-.result-item {
+.result {
   padding:12px;
-  margin-top:6px;
-  background:white;
-  border-radius:8px;
+  border-bottom:1px solid #ddd;
   cursor:pointer;
 }
 
-/* MODAL */
 #modal {
   display:none;
   position:fixed;
   top:50%;
   left:50%;
-  transform:translate(-50%, -50%);
-  background:#f9f9f9;
-  padding:16px 25px 22px 25px; /* tighter top */
+  transform:translate(-50%,-50%);
+  background:#fff;
+  padding:20px;
   width:420px;
   border-radius:16px;
   box-shadow:0 15px 40px rgba(0,0,0,0.2);
 }
 
-.close {
-  display:flex;
-  justify-content:flex-end;
-  margin-bottom:4px; /* reduced */
+.close-btn {
+  position:absolute;
+  top:12px;
+  right:16px;
+  cursor:pointer;
+  font-size:20px;
 }
 
-.row {
-  display:flex;
-  gap:10px;
-  margin:6px 0; /* slightly tighter */
-}
+.row { display:flex; justify-content:space-between; margin:6px 0; }
 
-.row b { width:120px; }
+.days { display:flex; gap:10px; flex-wrap:wrap; margin-top:15px; }
 
-#days {
-  display:flex;
-  gap:10px;
-  margin-top:15px;
-}
-
-.day-btn {
-  flex:1;
-  padding:14px;
+.day {
+  padding:12px;
   border-radius:12px;
-  border:none;
+  background:#f5c6c6;
   font-weight:bold;
+  min-width:70px;
+  text-align:center;
 }
 
-.green { background:#c8f2d1; }
-.red { background:#f7c6c6; }
+.day.active { border:2px solid black; }
+.day.present { background:#b7e1cd; }
 
-.selected { border:2px solid black; }
-
-#actionBtn {
+button {
   width:100%;
   padding:15px;
-  margin-top:20px;
   border:none;
   border-radius:12px;
+  margin-top:20px;
   font-size:16px;
+  cursor:pointer;
 }
+
+.checkin { background:#ddd; }
+.undo { background:#dc3545; color:white; }
+
 </style>
 </head>
 
 <body>
 
-<h2>EventOps Check-In</h2>
+<h1>EventOps Check-In</h1>
 
-<select id="daySelect" onchange="loadDashboard()">
-<option value="0">Day 1</option>
-<option value="1">Day 2</option>
-<option value="2">Day 3</option>
-<option value="3">Day 4</option>
-<option value="4">Day 5</option>
+<select id="daySelect">
+<option value="1">Day 1</option>
+<option value="2">Day 2</option>
+<option value="3">Day 3</option>
+<option value="4">Day 4</option>
+<option value="5">Day 5</option>
 </select>
 
-<br><br>
+<div class="stats">
+<div class="card">Total<br><span id="total">0</span></div>
+<div class="card">Present<br><span id="present">0</span></div>
+<div class="card">No Show<br><span id="noshow">0</span></div>
+<div class="card">%<br><span id="percent">0%</span></div>
+</div>
 
-<input id="search" placeholder="Search..." oninput="handleSearch()">
-
+<input id="search" placeholder="Search...">
 <div id="results"></div>
 
-<!-- MODAL -->
 <div id="modal">
-  <div class="close">
-    <span onclick="closeModal()">✖</span>
-  </div>
+<span class="close-btn" onclick="closeModal()">✖</span>
 
-  <div class="row"><b>Unique ID:</b><span id="m_id"></span></div>
-  <div class="row"><b>Name:</b><span id="m_name"></span></div>
-  <div class="row"><b>Company:</b><span id="m_company"></span></div>
-  <div class="row"><b>ASN:</b><span id="m_asn"></span></div>
-  <div class="row"><b>Shirt:</b><span id="m_shirt"></span></div>
+<div class="row"><b>Unique ID:</b><span id="m_id"></span></div>
+<div class="row"><b>Name:</b><span id="m_name"></span></div>
+<div class="row"><b>Company:</b><span id="m_company"></span></div>
+<div class="row"><b>ASN:</b><span id="m_asn"></span></div>
+<div class="row"><b>Shirt:</b><span id="m_shirt"></span></div>
 
-  <div id="days"></div>
+<div class="days" id="daysContainer"></div>
 
-  <button id="actionBtn"></button>
+<button id="actionBtn"></button>
 </div>
 
 <script>
 const API_URL = "https://script.google.com/macros/s/AKfycbyn6wx4nZL9J0kkqvN7SHo4xnHUyVsbdZPTvoooiGjxuVOiSpNgS0K22dsR2yFT-afHhQ/exec";
 
-let attendees = [];
-let selected = null;
+let USERS = [];
+let CURRENT = null;
 
-function init(){
-  fetch(`${API_URL}?action=getAllAttendees`)
-  .then(r=>r.json())
-  .then(d=>{attendees=d;});
+window.onload = () => {
+  loadData();
+  setInterval(loadData, 5000);
+};
+
+async function loadData(){
+  const res = await fetch(API_URL);
+  USERS = await res.json();
+  updateDashboard();
 }
-init();
 
-/******** SEARCH *********/
-function handleSearch(){
-  const q = document.getElementById("search").value.toLowerCase();
+function updateDashboard(){
+  const day = daySelect.value;
+  let total=0, present=0;
 
-  const results = attendees.filter(a =>
-    (a.first && a.first.toLowerCase().includes(q)) ||
-    (a.last && a.last.toLowerCase().includes(q)) ||
-    (a.nick && a.nick.toLowerCase().includes(q)) ||
-    (a.email && a.email.toLowerCase().includes(q))
+  USERS.forEach(u=>{
+    const allowed = (u.allowed_days||"1,2,3,4,5").split(",");
+    if(!allowed.includes(day)) return;
+
+    total++;
+    if(u["day"+day]==="Present") present++;
+  });
+
+  totalEl.innerText=total;
+  presentEl.innerText=present;
+  noshow.innerText=total-present;
+  percent.innerText= total?Math.round(present/total*100)+"%":"0%";
+}
+
+daySelect.onchange=updateDashboard;
+
+search.oninput = function(){
+  const v=this.value.toLowerCase();
+
+  const list=USERS.filter(u=>
+    (u.first_name||"").toLowerCase().includes(v)||
+    (u.last_name||"").toLowerCase().includes(v)||
+    (u.nick_name||"").toLowerCase().includes(v)||
+    (u.email||"").toLowerCase().includes(v)
   );
 
-  renderResults(results);
-}
-
-function renderResults(list){
-  const container = document.getElementById("results");
-  container.innerHTML = "";
-
-  list.forEach(a=>{
-    const div=document.createElement("div");
-    div.className="result-item";
-    div.innerText=`${a.id} - ${a.first} ${a.last}`;
-    div.onclick=()=>openModal(a);
-    container.appendChild(div);
+  results.innerHTML="";
+  list.forEach(u=>{
+    let d=document.createElement("div");
+    d.className="result";
+    d.innerText=u.id+" - "+u.first_name+" "+u.last_name;
+    d.onclick=()=>openModal(u);
+    results.appendChild(d);
   });
-}
+};
 
-/******** MODAL *********/
-function openModal(a){
-  selected=a;
+function openModal(u){
+  CURRENT=u;
 
-  document.getElementById("modal").style.display="block";
+  m_id.innerText=u.id;
+  m_name.innerText=u.first_name+" "+u.last_name+" ("+u.nick_name+")";
+  m_company.innerText=u.company;
+  m_asn.innerText=u.asn;
+  m_shirt.innerText=u.shirt;
 
-  document.getElementById("m_id").innerText=a.id;
-  document.getElementById("m_name").innerText=`${a.first} ${a.last} (${a.nick})`;
-  document.getElementById("m_company").innerText=a.company||"";
-  document.getElementById("m_asn").innerText=a.asn||"";
-  document.getElementById("m_shirt").innerText=a.shirt||"";
+  const day=daySelect.value;
+  const allowed=(u.allowed_days||"1,2,3,4,5").split(",");
 
-  renderDays(a);
-}
+  let html="";
+  for(let i=1;i<=5;i++){
+    if(!allowed.includes(String(i))) continue;
 
-function closeModal(){
-  document.getElementById("modal").style.display="none";
-}
+    let cls="day";
+    if(i==day) cls+=" active";
+    if(u["day"+i]==="Present") cls+=" present";
 
-/******** DAYS *********/
-function renderDays(a){
-  const container=document.getElementById("days");
-  container.innerHTML="";
-
-  const day=getDay();
-
-  for(let i=0;i<5;i++){
-    const btn=document.createElement("button");
-    btn.className="day-btn";
-
-    if(a.days[i]==="Present"){
-      btn.classList.add("green");
-      btn.innerText=`Day ${i+1} ✓`;
-    }else{
-      btn.classList.add("red");
-      btn.innerText=`Day ${i+1} ✖`;
-    }
-
-    if(i===day) btn.classList.add("selected");
-
-    container.appendChild(btn);
+    html+=`<div class="${cls}">Day ${i} ${u["day"+i]==="Present"?"✓":"✖"}</div>`;
   }
 
-  renderAction(a);
-}
+  daysContainer.innerHTML=html;
 
-/******** ACTION *********/
-function renderAction(a){
-  const btn=document.getElementById("actionBtn");
-  const day=getDay();
-
-  if(a.days[day]==="Present"){
-    btn.innerText="Undo (Admin)";
-    btn.style.background="#dc3545";
-    btn.style.color="white";
-    btn.onclick=()=>undo(a.id,day);
-  }else{
-    btn.innerText="Check In";
-    btn.style.background="#ccc";
-    btn.style.color="black";
-    btn.onclick=()=>checkIn(a.id,day);
+  if(u["day"+day]==="Present"){
+    actionBtn.innerText="Undo (Admin)";
+    actionBtn.className="undo";
+    actionBtn.onclick=undo;
+  } else {
+    actionBtn.innerText="Check In";
+    actionBtn.className="checkin";
+    actionBtn.onclick=checkin;
   }
+
+  modal.style.display="block";
 }
 
-/******** API *********/
-function checkIn(id,day){
-  fetch(`${API_URL}?action=checkIn&id=${id}&day=${day}`)
-  .then(()=>reload());
+function closeModal(){ modal.style.display="none"; }
+
+async function checkin(){
+  await fetch(API_URL,{method:"POST",body:JSON.stringify({
+    action:"checkin", id:CURRENT.id, day:daySelect.value
+  })});
+  loadData(); closeModal();
 }
 
-function undo(id,day){
-  const pin=prompt("Enter Admin PIN:");
+async function undo(){
+  const pin=prompt("Admin PIN:");
   if(!pin) return;
 
-  fetch(`${API_URL}?action=verifyPin&pin=${pin}`)
-  .then(r=>r.json())
-  .then(res=>{
-    if(res.valid){
-      fetch(`${API_URL}?action=undo&id=${id}&day=${day}`)
-      .then(()=>reload());
-    }else{
-      alert("Invalid PIN");
-    }
-  });
-}
-
-function reload(){
-  fetch(`${API_URL}?action=getAllAttendees`)
-  .then(r=>r.json())
-  .then(data=>{
-    attendees=data;
-    const updated=attendees.find(x=>x.id===selected.id);
-    selected=updated;
-    openModal(updated);
-  });
-}
-
-function getDay(){
-  return parseInt(document.getElementById("daySelect").value);
+  await fetch(API_URL,{method:"POST",body:JSON.stringify({
+    action:"undo", id:CURRENT.id, day:daySelect.value, pin
+  })});
+  loadData(); closeModal();
 }
 </script>
 
