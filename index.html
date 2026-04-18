@@ -1,150 +1,97 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>EventOps Check-In</title>
+<title>EventOps Check-In</title>
 
-  <style>
-    body {
-      font-family: Arial;
-      padding: 20px;
-      background: #f5f6f8;
-    }
+<style>
+body { font-family: Arial; background:#f5f6f8; padding:20px; }
 
-    h2 {
-      margin-bottom: 10px;
-    }
+input {
+  padding:10px;
+  width:300px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
 
-    input {
-      padding: 10px;
-      width: 300px;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
+.result-item {
+  padding:12px;
+  margin-top:6px;
+  background:white;
+  border-radius:8px;
+  cursor:pointer;
+}
 
-    .result-item {
-      padding: 12px;
-      border: 1px solid #ddd;
-      margin-top: 6px;
-      border-radius: 8px;
-      cursor: pointer;
-      background: white;
-    }
-
-    /* MODAL */
+/* MODAL */
 #modal {
-  display: none;
-  position: fixed;
-  top: 8%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #f9f9f9;
-  padding: 20px 25px 25px 25px; /* 👈 balanced */
-  width: 420px;
-  border-radius: 16px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+  display:none;
+  position:fixed;
+  top:8%;
+  left:50%;
+  transform:translateX(-50%);
+  background:#f9f9f9;
+  padding:20px 25px 25px 25px;
+  width:420px;
+  border-radius:16px;
+  box-shadow:0 15px 40px rgba(0,0,0,0.2);
 }
 
 .close {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 10px; /* 👈 reduces gap */
+  display:flex;
+  justify-content:flex-end;
+  margin-bottom:10px;
 }
-    
-    .close span {
-      cursor: pointer;
-      font-size: 22px;
-      font-weight: bold;
-    }
 
-    .row {
-      display: flex;
-      gap: 10px;
-      margin: 8px 0;
-    }
+.row {
+  display:flex;
+  gap:10px;
+  margin:8px 0;
+}
 
-    .row b {
-      width: 120px;
-    }
+.row b { width:120px; }
 
-    #days {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 15px;
-    }
+#days {
+  display:flex;
+  gap:10px;
+  margin-top:15px;
+}
 
-    .day-btn {
-      flex: 1;
-      padding: 14px;
-      border-radius: 12px;
-      border: none;
-      font-weight: bold;
-      transition: 0.2s;
-    }
+.day-btn {
+  flex:1;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  font-weight:bold;
+}
 
-    .day-btn:hover {
-      transform: scale(1.03);
-    }
+.green { background:#c8f2d1; }
+.red { background:#f7c6c6; }
 
-    .green {
-      background: #c8f2d1;
-    }
+.selected { border:2px solid black; }
 
-    .red {
-      background: #f7c6c6;
-    }
-
-    .selected {
-      border: 2px solid black;
-    }
-
-    #actionBtn {
-      width: 100%;
-      padding: 15px;
-      margin-top: 20px;
-      border: none;
-      border-radius: 12px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    /* DASHBOARD */
-    .stats {
-      display: flex;
-      gap: 10px;
-      margin: 15px 0;
-    }
-
-    .card {
-      flex: 1;
-      padding: 12px;
-      background: white;
-      border-radius: 10px;
-      text-align: center;
-    }
-
-  </style>
+#actionBtn {
+  width:100%;
+  padding:15px;
+  margin-top:20px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+}
+</style>
 </head>
 
 <body>
 
 <h2>EventOps Check-In</h2>
 
-Day:
 <select id="daySelect" onchange="loadDashboard()">
-  <option value="0">Day 1</option>
-  <option value="1">Day 2</option>
-  <option value="2">Day 3</option>
-  <option value="3">Day 4</option>
-  <option value="4">Day 5</option>
+<option value="0">Day 1</option>
+<option value="1">Day 2</option>
+<option value="2">Day 3</option>
+<option value="3">Day 4</option>
+<option value="4">Day 5</option>
 </select>
 
-<div class="stats">
-  <div class="card">Total <br><b id="total">0</b></div>
-  <div class="card">Present <br><b id="present">0</b></div>
-  <div class="card">No Show <br><b id="noshow">0</b></div>
-  <div class="card">% <br><b id="percent">0</b></div>
-</div>
+<br><br>
 
 <input id="search" placeholder="Search..." oninput="handleSearch()">
 
@@ -152,7 +99,6 @@ Day:
 
 <!-- MODAL -->
 <div id="modal">
-
   <div class="close">
     <span onclick="closeModal()">✖</span>
   </div>
@@ -166,29 +112,23 @@ Day:
   <div id="days"></div>
 
   <button id="actionBtn"></button>
-
 </div>
 
 <script>
-
 const API_URL = "https://script.google.com/macros/s/AKfycbyn6wx4nZL9J0kkqvN7SHo4xnHUyVsbdZPTvoooiGjxuVOiSpNgS0K22dsR2yFT-afHhQ/exec";
 
 let attendees = [];
 let selected = null;
 
-/******** LOAD *********/
-function init() {
+function init(){
   fetch(`${API_URL}?action=getAllAttendees`)
-    .then(r => r.json())
-    .then(data => {
-      attendees = data;
-      loadDashboard();
-    });
+  .then(r=>r.json())
+  .then(d=>{attendees=d;});
 }
 init();
 
 /******** SEARCH *********/
-function handleSearch() {
+function handleSearch(){
   const q = document.getElementById("search").value.toLowerCase();
 
   const results = attendees.filter(a =>
@@ -201,62 +141,58 @@ function handleSearch() {
   renderResults(results);
 }
 
-function renderResults(list) {
+function renderResults(list){
   const container = document.getElementById("results");
   container.innerHTML = "";
 
-  list.forEach(a => {
-    const div = document.createElement("div");
-    div.className = "result-item";
-    div.innerText = `${a.id} - ${a.first} ${a.last}`;
-    div.onclick = () => openModal(a);
+  list.forEach(a=>{
+    const div=document.createElement("div");
+    div.className="result-item";
+    div.innerText=`${a.id} - ${a.first} ${a.last}`;
+    div.onclick=()=>openModal(a);
     container.appendChild(div);
   });
 }
 
 /******** MODAL *********/
-function openModal(a) {
-  selected = a;
+function openModal(a){
+  selected=a;
 
-  document.getElementById("modal").style.display = "block";
+  document.getElementById("modal").style.display="block";
 
-  document.getElementById("m_id").innerText = a.id;
-  document.getElementById("m_name").innerText =
-    `${a.first} ${a.last} (${a.nick})`;
-
-  document.getElementById("m_company").innerText = a.company || "";
-  document.getElementById("m_asn").innerText = a.asn || "";
-  document.getElementById("m_shirt").innerText = a.shirt || "";
+  document.getElementById("m_id").innerText=a.id;
+  document.getElementById("m_name").innerText=`${a.first} ${a.last} (${a.nick})`;
+  document.getElementById("m_company").innerText=a.company||"";
+  document.getElementById("m_asn").innerText=a.asn||"";
+  document.getElementById("m_shirt").innerText=a.shirt||"";
 
   renderDays(a);
 }
 
-function closeModal() {
-  document.getElementById("modal").style.display = "none";
+function closeModal(){
+  document.getElementById("modal").style.display="none";
 }
 
 /******** DAYS *********/
-function renderDays(a) {
-  const container = document.getElementById("days");
-  container.innerHTML = "";
+function renderDays(a){
+  const container=document.getElementById("days");
+  container.innerHTML="";
 
-  const selectedDay = getDay();
+  const day=getDay();
 
-  for (let i = 0; i < 5; i++) {
-    const btn = document.createElement("button");
-    btn.className = "day-btn";
+  for(let i=0;i<5;i++){
+    const btn=document.createElement("button");
+    btn.className="day-btn";
 
-    if (a.days[i] === "Present") {
+    if(a.days[i]==="Present"){
       btn.classList.add("green");
-      btn.innerText = `Day ${i+1} ✓`;
-    } else {
+      btn.innerText=`Day ${i+1} ✓`;
+    }else{
       btn.classList.add("red");
-      btn.innerText = `Day ${i+1} ✖`;
+      btn.innerText=`Day ${i+1} ✖`;
     }
 
-    if (i === selectedDay) {
-      btn.classList.add("selected");
-    }
+    if(i===day) btn.classList.add("selected");
 
     container.appendChild(btn);
   }
@@ -265,78 +201,59 @@ function renderDays(a) {
 }
 
 /******** ACTION *********/
-function renderAction(a) {
-  const btn = document.getElementById("actionBtn");
-  const day = getDay();
+function renderAction(a){
+  const btn=document.getElementById("actionBtn");
+  const day=getDay();
 
-  if (a.days[day] === "Present") {
-    btn.innerText = "Undo (Admin)";
-    btn.style.background = "#dc3545";
-    btn.style.color = "white";
-    btn.onclick = () => undo(a.id, day);
-  } else {
-    btn.innerText = "Check In";
-    btn.style.background = "#ccc";
-    btn.style.color = "black";
-    btn.onclick = () => checkIn(a.id, day);
+  if(a.days[day]==="Present"){
+    btn.innerText="Undo (Admin)";
+    btn.style.background="#dc3545";
+    btn.style.color="white";
+    btn.onclick=()=>undo(a.id,day);
+  }else{
+    btn.innerText="Check In";
+    btn.style.background="#ccc";
+    btn.style.color="black";
+    btn.onclick=()=>checkIn(a.id,day);
   }
 }
 
 /******** API *********/
-function checkIn(id, day) {
+function checkIn(id,day){
   fetch(`${API_URL}?action=checkIn&id=${id}&day=${day}`)
-    .then(() => reload());
+  .then(()=>reload());
 }
 
-function undo(id, day) {
-  const pin = prompt("Enter Admin PIN:");
-
-  if (!pin) return;
+function undo(id,day){
+  const pin=prompt("Enter Admin PIN:");
+  if(!pin) return;
 
   fetch(`${API_URL}?action=verifyPin&pin=${pin}`)
-    .then(r => r.json())
-    .then(res => {
-      if (res.valid) {
-        fetch(`${API_URL}?action=undo&id=${id}&day=${day}`)
-          .then(() => reload());
-      } else {
-        alert("Invalid PIN");
-      }
-    });
+  .then(r=>r.json())
+  .then(res=>{
+    if(res.valid){
+      fetch(`${API_URL}?action=undo&id=${id}&day=${day}`)
+      .then(()=>reload());
+    }else{
+      alert("Invalid PIN");
+    }
+  });
 }
 
-function reload() {
+function reload(){
   fetch(`${API_URL}?action=getAllAttendees`)
-    .then(r => r.json())
-    .then(data => {
-      attendees = data;
-
-      const updated = attendees.find(x => x.id === selected.id);
-      selected = updated;
-
-      loadDashboard();
-      openModal(updated);
-    });
+  .then(r=>r.json())
+  .then(data=>{
+    attendees=data;
+    const updated=attendees.find(x=>x.id===selected.id);
+    selected=updated;
+    openModal(updated);
+  });
 }
 
-/******** DASHBOARD *********/
-function loadDashboard() {
-  const day = getDay();
-
-  fetch(`${API_URL}?action=getCounts&day=${day}`)
-    .then(r => r.json())
-    .then(d => {
-      document.getElementById("total").innerText = d.total;
-      document.getElementById("present").innerText = d.present;
-      document.getElementById("noshow").innerText = d.noShow;
-      document.getElementById("percent").innerText = d.percentage;
-    });
-}
-
-function getDay() {
+function getDay(){
   return parseInt(document.getElementById("daySelect").value);
 }
-
 </script>
 
 </body>
